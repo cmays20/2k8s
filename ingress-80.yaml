@@ -1,0 +1,26 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: dklb-80-ingress
+  annotations:
+    kubernetes.io/ingress.class: edgelb
+    kubernetes.dcos.io/dklb-config: |
+      name: dklb-80
+  labels:
+    owner: dklb
+spec:
+  rules:
+  - host: www.nginx.test
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: nginx-service
+          servicePort: http
+  - host: www.apache.test
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: apache-service
+          servicePort: http

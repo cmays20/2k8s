@@ -1,11 +1,11 @@
 {
   "service": {
-    "name": "prod/kubernetes-prod",
+    "name": "uat/kubernetes-uat",
     "sleep": 1000,
-    "service_account_secret": "prod/kubernetes-prod/sa",
+    "service_account_secret": "uat/kubernetes-uat/sa",
     "virtual_network_name": "dcos",
     "log_level": "INFO",
-    "service_account": "kubernetes-prod"
+    "service_account": "kubernetes-uat"
   },
   "kubernetes": {
     "authorization_mode": "RBAC",

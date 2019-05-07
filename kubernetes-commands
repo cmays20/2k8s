@@ -1,0 +1,9 @@
+dcos kubernetes cluster update  --cluster-name=dev/kubernetes-dev --package-version=2.2.0-1.13.3
+
+dcos kubernetes cluster debug plan status update --cluster-name=dev/kubernetes-dev
+
+dcos task | grep etcd
+
+dcos task exec -it prod.kubernetes-prod__etcd-0-peer__8b67c396-0003-476d-bfc8-dd02e76d9b0f bash -c 'kill -9 $(pidof etcd)'
+
+

@@ -29,25 +29,10 @@ kind: Service
 metadata:
   name: nginx-service
 spec:
+  type: NodePort
   ports:
   - name: http
     targetPort: 80
     port: 80
   selector:
     app: nginx
----
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: nginx-ingress
-  annotations:
-    kubernetes.io/ingress.class: traefik
-spec:
-  rules:
-  - host: www.nginx.test
-    http:
-      paths:
-      - path: /
-        backend:
-          serviceName: nginx-service
-          servicePort: http

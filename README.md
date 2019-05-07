@@ -1,4 +1,4 @@
-### SETUP SCRIPT FOR TWO K8S CLUSTERS ON DC/OS ("2k8s") 
+### SETUP SCRIPT FOR TWO K8S CLUSTERS ON DC/OS ("2k8s")
 Revision 12-10-18
 
 This is a script for Enterprise DC/OS 1.12 that will setup two Kubernetes clusters  
@@ -46,7 +46,7 @@ Your existing DC/OS cluster configs will be moved to /tmp/clusters because of a 
 
 The DC/OS CLI and kubectl must already be installed
 
-TO DO: Add Jupyter to this, need to require 2nd public agent since MarathonLB must be used for Jypyter at the moment. The jira for edgelb config doesn't seem to work. 
+TO DO: Add Jupyter to this, need to require 2nd public agent since MarathonLB must be used for Jypyter at the moment. The jira for edgelb config doesn't seem to work.
 
 TO DO: Rename K8s nginx to nginx-deployment like apache.
 
@@ -60,7 +60,7 @@ TO DO: Rename K8s nginx to nginx-deployment like apache.
 
 3. (optional) Modify the script and set the package version variables. They are set to be older by default so upgrades can be shown.
 
-4. (optional) Modify the script and set the SSH_KEY_FILE variable to point to your SSH key (CCM key?). The script will not use SSH, but it will do an ssh-add for you so you can ssh later if desired. 
+4. (optional) Modify the script and set the SSH_KEY_FILE variable to point to your SSH key (CCM key?). The script will not use SSH, but it will do an ssh-add for you so you can ssh later if desired.
 
 #### USAGE
 
@@ -74,24 +74,24 @@ TO DO: Rename K8s nginx to nginx-deployment like apache.
 
 5. Wait for it to finish (~ 7 min)
 
-6. It will open your browser to www.apache.test and www.nginx.test and the K8s dashboard for /prod/kubernetes-prod. 
+6. It will open your browser to www.apache.test and www.nginx.test and the K8s dashboard for /prod/kubernetes-prod.
 
 7. In the K8s dashboard select the file /tmp/kubeconfig to authenticate.
 
 #### DEMO
 
-This is an incomplete section, ignore it, until it's no longer a work in progress. 
+This is an incomplete section, ignore it, until it's no longer a work in progress.
 
 1. Deploy older cassandra via GUI before running script, then in AWS kill instance with node 1.
 
-2. Run script. 
+2. Run script.
 
 Begin demo
 
 3. Explain HDMK, show RBAC, secrets, etc.
 
 4. Upgrade dev k8s  
-   dcos kubernetes cluster update --cluster-name=dev/kubernetes-dev --package-version=2.1.0-1.12.3 --yes  
+   dcos kubernetes cluster update --cluster-name=dev/kubernetes-dev --package-version=2.2.2-1.13.5 --yes  
    Switch to GUI, talk about it  
    TODO: why doesn't this work?: dcos kubernetes cluster debug plan status update --cluster-name=dev/kubernetes-dev
 
@@ -102,7 +102,7 @@ Begin demo
    kubectl get pod  
    kubectl get ds -n kube-system |grep traefik  
 
-7. Login as dev-user (pw=deleteme) using an incognito window to show limted access, 
+7. Login as dev-user (pw=deleteme) using an incognito window to show limted access,
    also show secrets (TODO: fix permissions, doesn't yet work)
 
 8. cassandra demo:  
@@ -116,11 +116,11 @@ Begin demo
    dcos cassandra --name=/cassandra plan status repair  
    go to GUI and add a cassandra node  
    wait 10  
-   dcos cassandra --name=/cassandra update status (show 4th node is being added) 
+   dcos cassandra --name=/cassandra update status (show 4th node is being added)
 
 10. Increase private node count in prod k8s to 2 via GUI
     Show slide of what it takes to add a node manually. Compare us to a cloud operator.
-    
+
 11. K8s self healing demo https://github.com/ably77/dcos-se/tree/master/Kubernetes/mke#automated-self-healing  
 
 12. Show nodes screen and dashboard

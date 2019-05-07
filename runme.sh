@@ -2,23 +2,23 @@
 
 ######## VARIABLES ########
 
-SCRIPT_VERSION="DEC-10-18"
-LICENSE_FILE="dcos-1-12-license-50-nodes.txt"
-EDGE_LB_VERSION="1.2.3"
-K8S_MKE_VERSION="2.0.0-1.12.1"
-K8S_PROD_VERSION="2.0.1-1.12.2"
-K8S_DEV_VERSION="2.0.1-1.12.2"
-CASSANDRA_VERSION="2.3.0-3.0.16"
-JENKINS_VERSION="3.5.2-2.107.2"
+SCRIPT_VERSION="FEB-9-18"
+#LICENSE_FILE="license.txt"
+EDGE_LB_VERSION="1.3.0"
+K8S_MKE_VERSION="2.2.2-1.13.5"
+K8S_PROD_VERSION="2.2.0-1.13.3"
+K8S_DEV_VERSION="2.2.0-1.13.3"
+#CASSANDRA_VERSION="2.5.0-3.11.3"
+#JENKINS_VERSION="3.5.4-2.150.1"
 # This script is ran via sudo, so don't use ~
-SSH_KEY_FILE="/Users/josh/ccm-priv.key"
+#SSH_KEY_FILE="/Users/josh/ccm-priv.key"
 DCOS_USER="bootstrapuser"
 DCOS_PASSWORD="deleteme"
 
 #### TEST IF RAN AS ROOT
 
 if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root, via sudo, because it will add two entries to /etc/hosts:" 
+   echo "This script must be run as root, via sudo, because it will add two entries to /etc/hosts:"
    echo "www.apache.test & www.nginx.test"
    exit 1
 fi
@@ -35,7 +35,12 @@ then
 fi
 
 # For the master change http to https so kubectl setup doesn't break
-MASTER_URL=$(echo $1 | sed 's/http/https/')
+if [[ "$1" =~ "https" ]]
+then
+  MASTER_URL=$1
+else
+  MASTER_URL=$(echo $1 | sed 's/http/https/')
+fi
 
 #### EXPLAIN WHAT THIS SCRIPT WILL DO
 
@@ -59,7 +64,7 @@ echo "  5. A v$CASSANDRA_VERSION cassandra cluster named /cassandra"
 echo
 echo "  6. A v$JENKINS_VERSION Jenkins named /dev/jenkins"
 echo
-echo "  7. An allocation load /allocation-load so the dashboard stats are not flat" 
+echo "  7. An allocation load /allocation-load so the dashboard stats are not flat"
 echo
 echo "  8. A license file named $LICENSE_FILE, if it exists"
 echo
@@ -67,7 +72,7 @@ echo "  9. The SSH key $SSH_KEY_FILE via ssh-add, if it exists"
 echo
 echo "Your existing kubectl config file will be moved to /tmp/kubectl-config"
 echo
-echo "Your existing /etc/hosts will be backed up to /tmp/hosts before modifying it to add" 
+echo "Your existing /etc/hosts will be backed up to /tmp/hosts before modifying it to add"
 echo "   lines for www.apache.test and www.nginx.test"
 echo
 echo "Your existing DC/OS cluster configs will be moved to /tmp/clusters"
@@ -97,10 +102,22 @@ echo
 echo "**** Running command: dcos cluster setup"
 echo
 dcos cluster setup $MASTER_URL --insecure --username=$DCOS_USER --password=$DCOS_PASSWORD
+if [[ "$?" != 0 ]]; then
+  echo
+  echo "**** CLUSTER SETUP FAILED ****"
+  echo
+  exit 1
+fi
 echo
 echo "**** Installing enterprise CLI"
 echo
 dcos package install dcos-enterprise-cli --yes
+if [[ "$?" != 0 ]]; then
+  echo
+  echo "**** Enterprise CLI SETUP FAILED ****"
+  echo
+  exit 1
+fi
 echo
 echo "**** Setting core.ssl_verify to false"
 echo
@@ -289,26 +306,28 @@ dcos kubernetes cluster create --package-version=$K8S_DEV_VERSION --options=kube
 # dcos kubernetes cluster debug plan status deploy --cluster-name=dev/kubernetes-dev
 
 #### INSTALL /DEV/JENKINS
-
-echo
-echo "**** Installing Jenkins v$JENKINS_VERSION to /dev"
-echo
-dcos package install jenkins --package-version=$JENKINS_VERSION --options=jenkins-options.json --yes 
+if [[ -e $JENKINS_VERSION ]]; then
+  echo
+  echo "**** Installing Jenkins v$JENKINS_VERSION to /dev"
+  echo
+  dcos package install jenkins --package-version=$JENKINS_VERSION --options=jenkins-options.json --yes
+fi
 
 #### INSTALL CASSANDRA
-
-echo
-echo
-echo "**** Installing Cassandra v$CASSANDRA_VERSION to /"
-echo
-# Using all defaults 
-dcos package install cassandra --package-version=$CASSANDRA_VERSION --yes
-# In case it was installed manually before running this script,
-# which I do sometimes since I often terminate a node in AWS to show
-# cassandra repairing, we will now install the CLI. So the above install of cassandra 
-# will report it's already installed, but since it was installed from the GUI the CLI
-# isn't yet installed. 
-dcos package install cassandra --package-version=$CASSANDRA_VERSION --cli --yes
+if [[ -e $CASSANDRA_VERSION ]]; then
+  echo
+  echo
+  echo "**** Installing Cassandra v$CASSANDRA_VERSION to /"
+  echo
+  # Using all defaults
+  dcos package install cassandra --package-version=$CASSANDRA_VERSION --yes
+  # In case it was installed manually before running this script,
+  # which I do sometimes since I often terminate a node in AWS to show
+  # cassandra repairing, we will now install the CLI. So the above install of cassandra
+  # will report it's already installed, but since it was installed from the GUI the CLI
+  # isn't yet installed.
+  dcos package install cassandra --package-version=$CASSANDRA_VERSION --cli --yes
+fi
 
 #### WAIT FOR BOTH K8S CLUSTERS TO COMPLETE THEIR INSTALL
 
@@ -324,7 +343,7 @@ seconds=330
 OUTPUT=1
 while [ "$OUTPUT" != 0 ]; do
   # since the public kubelet is the last to deploy, we will monitor it
-  OUTPUT=`dcos kubernetes cluster debug plan status deploy --cluster-name=prod/kubernetes-prod | grep kube-node-public-0 | awk '{print $3}'`;
+  OUTPUT=`dcos kubernetes cluster debug plan status deploy --cluster-name=prod/kubernetes-prod | grep kube-node-1 | awk '{print $4}'`;
   if [ "$OUTPUT" = "(COMPLETE)" ];then
         OUTPUT=0
   fi
@@ -366,13 +385,13 @@ echo
 echo "**** Running kubectl get nodes for /prod/kubernetes-prod"
 echo
 kubectl get nodes
-
-#### INSTALL TRAEFIK, APACHE, AND NGINX TO /PROD/KUBERNETES-PROD CLUSTER
+#### INSTALL DKLB, APACHE, AND NGINX TO /PROD/KUBERNETES-PROD CLUSTER
 
 echo
-echo "**** Installing Traefik to /prod/kubernetes-prod"
+echo "**** Installing DKLB to /prod/kubernetes-prod"
 echo
-kubectl create -f traefik.yaml
+kubectl create -f dklb-prereqs.yaml
+kubectl create -f dklb-deployment.yaml
 echo
 echo "**** Installing Apache to /prod/kubernetes-prod"
 echo
@@ -381,6 +400,7 @@ echo
 echo "**** Installing NGINX to /prod/kubernetes-prod"
 echo
 kubectl create -f nginx.yaml
+kubectl create -f ingress-80.yaml
 
 #### SETUP KUBECTL FOR /DEV/KUBERNETES-DEV
 
@@ -460,7 +480,7 @@ dcos marathon app add allocation-load.json
 
 dcos marathon app add nginx-marathon-example.json
 dcos marathon app add nginx-marathon-load.json
- 
+
 #### CLEANUP, FIX DCOS CLI AND KUBECTL FILE OWNERSHIP BECAUSE OF SUDO
 
 rm -f private-key.pem 2> /dev/null
@@ -475,7 +495,7 @@ echo
 # If you ever break out of this script, you must run this command:
 chown -RH $SUDO_USER ~/.kube ~/.dcos
 
-echo "**** Opening browser window for www.nginx.test, www.apache.test" 
+echo "**** Opening browser window for www.nginx.test, www.apache.test"
 echo
 open "http://www.apache.test"
 open "http://www.nginx.test"
@@ -494,7 +514,7 @@ echo "**** Starting kubectl proxy"
 echo "     Killing any existing kubectl process, in case the proxy is still running"
 pkill kubectl 2 >/dev/null
 sleep 1
-sudo -u $SUDO_USER kubectl proxy --request-timeout=0 & 2>/dev/null  
+sudo -u $SUDO_USER kubectl proxy --request-timeout=0 & 2>/dev/null
 
 echo
 echo "**** Opening browser window for K8s dashboard for /prod/kubernetes-prod"
@@ -503,12 +523,11 @@ echo "     To login provide the kubectl config file of /tmp/kubeconfig"
 open "http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/"
 echo
 echo "     You should now open a different terminal window to use kubectl,"
-echo "     because sometimes kubectl proxy creates errors on screen of:" 
+echo "     because sometimes kubectl proxy creates errors on screen of:"
 echo "     Unsolicited response received on idle HTTP channel starting with \"HTTP/1.0 408 Request Time-out..."
 echo
 echo "     When done you can kill kubectl proxy with:   pkill kubectl"
 echo
-echo "SCRIPT HAS FINISHED" 
+echo "SCRIPT HAS FINISHED"
 echo "YOU SHOULD NOW OPEN A NEW TERMINAL WINDOWS TO USE KUBECTL, per the warning above"
 echo
-
